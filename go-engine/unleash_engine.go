@@ -17,31 +17,31 @@ type UnleashEngine struct {
 }
 
 func NewUnleashEngine() *UnleashEngine {
-	ptr := unsafe.Pointer(C.engine_new())
+	ptr := unsafe.Pointer(C.new_engine())
 	return &UnleashEngine{ptr: ptr}
 }
 
 func (e *UnleashEngine) TakeState(json string) {
-	C.engine_take_state(e.ptr, C.CString(json))
+	C.take_state(e.ptr, C.CString(json))
 }
 
-func (e *UnleashEngine) IsEnabled(toggleName string, context *Context) bool {
-	ctoggleName := C.CString(toggleName)
-
+func (e *UnleashEngine) ResolveAll(context *Context) []byte {
 	jsonContext, err := json.Marshal(context)
 
 	if err != nil {
 		log.Fatalf("Failed to serialize context: %v", err)
-		return false
+		return []byte{}
 	}
 	cjsonContext := C.CString(string(jsonContext))
 
 	defer func() {
-		C.free(unsafe.Pointer(ctoggleName))
 		C.free(unsafe.Pointer(cjsonContext))
 	}()
 
-	return bool(C.engine_is_enabled(e.ptr, ctoggleName, cjsonContext))
+	cresolveAllDef := C.resolve_all(e.ptr, cjsonContext)
+	jsonResolveAll := C.GoString(cresolveAllDef)
+
+	return []byte(jsonResolveAll)
 }
 
 type VariantDef struct {
@@ -70,7 +70,7 @@ func (e *UnleashEngine) GetVariant(toggleName string, context *Context) *Variant
 		C.free(unsafe.Pointer(cjsonContext))
 	}()
 
-	cvariantDef := C.engine_get_variant(e.ptr, ctoggleName, cjsonContext)
+	cvariantDef := C.check_variant(e.ptr, ctoggleName, cjsonContext)
 	jsonVariant := C.GoString(cvariantDef)
 
 	variantDef := &VariantDef{}

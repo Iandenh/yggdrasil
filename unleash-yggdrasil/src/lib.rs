@@ -215,7 +215,7 @@ impl Default for EngineState {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct ResolvedToggle {
     pub enabled: bool,
     pub impression_data: bool,

@@ -7,7 +7,7 @@ use std::{
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use unleash_types::{client_features::ClientFeatures, client_metrics::MetricBucket};
-use unleash_yggdrasil::{Context, EngineState, ExtendedVariantDef};
+use unleash_yggdrasil::{Context, EngineState, ExtendedVariantDef, ResolvedToggle};
 
 #[derive(Serialize, Deserialize)]
 struct Response<T> {
@@ -176,16 +176,28 @@ pub unsafe extern "C" fn check_enabled(
     engine_ptr: *mut c_void,
     toggle_name_ptr: *const c_char,
     context_ptr: *const c_char,
-    custom_strategy_results_ptr: *const c_char,
 ) -> *const c_char {
     let result: Result<Option<bool>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
-        let custom_strategy_results =
-            get_json::<CustomStrategyResults>(custom_strategy_results_ptr)?;
 
-        Ok(engine.check_enabled(toggle_name, &context, &Some(custom_strategy_results)))
+        Ok(engine.check_enabled(toggle_name, &context, &None))
+    })();
+
+    result_to_json_ptr(result)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn resolve_all(
+    engine_ptr: *mut c_void,
+    context_ptr: *const c_char,
+) -> *const c_char {
+    let result: Result<Option<HashMap<String, ResolvedToggle>>, FFIError> = (|| {
+        let engine = get_engine(engine_ptr)?;
+        let context: Context = get_json(context_ptr)?;
+
+        Ok(engine.resolve_all(&context, &None))
     })();
 
     result_to_json_ptr(result)
@@ -207,21 +219,18 @@ pub unsafe extern "C" fn check_variant(
     engine_ptr: *mut c_void,
     toggle_name_ptr: *const c_char,
     context_ptr: *const c_char,
-    custom_strategy_results_ptr: *const c_char,
 ) -> *const c_char {
     let result: Result<Option<ExtendedVariantDef>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
-        let custom_strategy_results =
-            get_json::<CustomStrategyResults>(custom_strategy_results_ptr)?;
         let base_variant = engine.check_variant(
             toggle_name,
             &context,
-            &Some(custom_strategy_results.clone()),
+            &None,
         );
         let toggle_enabled = engine
-            .check_enabled(toggle_name, &context, &Some(custom_strategy_results))
+            .check_enabled(toggle_name, &context, &None)
             .unwrap_or_default();
         Ok(base_variant.map(|variant| variant.to_enriched_response(toggle_enabled)))
     })();

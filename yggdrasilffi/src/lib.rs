@@ -222,6 +222,23 @@ pub unsafe extern "C" fn resolve_all(
     result_to_json_ptr(result)
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn resolve(
+    engine_ptr: *mut c_void,
+    toggle_name_ptr: *const c_char,
+    context_ptr: *const c_char,
+) -> *const c_char {
+    let result: Result<Option<ResolvedToggle>, FFIError> = (|| {
+        let engine = get_engine(engine_ptr)?;
+        let toggle_name = get_str(toggle_name_ptr)?;
+        let context: Context = get_json(context_ptr)?;
+
+        Ok(engine.resolve(toggle_name, &context, &None))
+    })();
+
+    result_to_json_ptr(result)
+}
+
 /// Checks the toggle variant for a given context. Returns a JSON encoded response of type `VariantResponse`.
 ///
 /// # Safety

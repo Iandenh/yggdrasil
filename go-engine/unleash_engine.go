@@ -12,8 +12,16 @@ import (
 	"unsafe"
 )
 
+const emptyCustomStrategyResults = "{}"
+
 type UnleashEngine struct {
 	ptr unsafe.Pointer
+}
+
+type response[T any] struct {
+	StatusCode   string `json:"status_code,omitempty"`
+	Value        T      `json:"value,omitempty"`
+	ErrorMessage string `json:"error_message,omitempty"`
 }
 
 func NewUnleashEngine() *UnleashEngine {
@@ -25,29 +33,43 @@ func (e *UnleashEngine) TakeState(json string) {
 	C.take_state(e.ptr, C.CString(json))
 }
 
-func (e *UnleashEngine) ResolveAll(context *Context) []byte {
+func (e *UnleashEngine) IsEnabled(toggleName string, context *Context) bool {
+	ctoggleName := C.CString(toggleName)
+
 	jsonContext, err := json.Marshal(context)
 
 	if err != nil {
 		log.Fatalf("Failed to serialize context: %v", err)
-		return []byte{}
+		return false
 	}
 	cjsonContext := C.CString(string(jsonContext))
+	cemptyStrategyResults := C.CString(emptyCustomStrategyResults)
 
 	defer func() {
+		C.free(unsafe.Pointer(ctoggleName))
 		C.free(unsafe.Pointer(cjsonContext))
+		C.free(unsafe.Pointer(cemptyStrategyResults))
 	}()
 
-	cresolveAllDef := C.resolve_all(e.ptr, cjsonContext)
-	jsonResolveAll := C.GoString(cresolveAllDef)
+	cenabled := C.check_enabled(e.ptr, ctoggleName, cjsonContext, C.CString(emptyCustomStrategyResults))
+	defer C.free_response(cenabled)
 
-	return []byte(jsonResolveAll)
+	jsonEnabled := C.GoString(cenabled)
+
+	enabled := &response[bool]{}
+	err = json.Unmarshal([]byte(jsonEnabled), enabled)
+	if err != nil {
+		fmt.Printf("Failed to deserialize enabled: %v\n", err)
+		return false
+	}
+	return enabled.Value
 }
 
 type VariantDef struct {
-	Name    string   `json:"name,omitempty"`
-	Payload *Payload `json:"payload,omitempty"`
-	Enabled bool     `json:"enabled,omitempty"`
+	Name           string   `json:"name,omitempty"`
+	Payload        *Payload `json:"payload,omitempty"`
+	Enabled        bool     `json:"enabled,omitempty"`
+	FeatureEnabled bool     `json:"feature_enabled,omitempty"`
 }
 
 type Payload struct {
@@ -59,27 +81,34 @@ func (e *UnleashEngine) GetVariant(toggleName string, context *Context) *Variant
 	ctoggleName := C.CString(toggleName)
 
 	jsonContext, err := json.Marshal(context)
+
 	if err != nil {
 		fmt.Printf("Failed to serialize context: %v\n", err)
 		return nil
 	}
+
 	cjsonContext := C.CString(string(jsonContext))
+	cemptyStrategyResults := C.CString(emptyCustomStrategyResults)
 
 	defer func() {
 		C.free(unsafe.Pointer(ctoggleName))
 		C.free(unsafe.Pointer(cjsonContext))
+		C.free(unsafe.Pointer(cemptyStrategyResults))
 	}()
 
-	cvariantDef := C.check_variant(e.ptr, ctoggleName, cjsonContext)
+	cvariantDef := C.check_variant(e.ptr, ctoggleName, cjsonContext, cemptyStrategyResults)
+	defer C.free_response(cvariantDef)
+
 	jsonVariant := C.GoString(cvariantDef)
 
-	variantDef := &VariantDef{}
+	variantDef := &response[*VariantDef]{}
 	err = json.Unmarshal([]byte(jsonVariant), variantDef)
 	if err != nil {
 		fmt.Printf("Failed to deserialize variantDef: %v\n", err)
 		return nil
 	}
-	return variantDef
+
+	return variantDef.Value
 }
 
 type Context struct {

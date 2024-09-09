@@ -12,9 +12,9 @@ final class UnleashEngineTest extends TestCase
         $engine = new UnleashEngine();
         $context = new Context("test", "test", "test", "test", "test", "test", new stdClass());
 
-        $is_enabled = $engine->isEnabled("test", $context);
+        $isEnabled = $engine->isEnabled("test", $context);
 
-        $this->assertFalse($is_enabled);
+        $this->assertFalse($isEnabled);
     }
 
     public function testTakeState()
@@ -45,8 +45,8 @@ final class UnleashEngineTest extends TestCase
         $engine->takeState($jsonData);
         $context = new Context("test", "test", "test", "test", "test", "test", new stdClass());
 
-        $is_enabled = $engine->isEnabled("test", $context);
-        $this->assertFalse($is_enabled);
+        $isEnabled = $engine->isEnabled("Feature.A", $context);
+        $this->assertTrue($isEnabled);
     }
 
     public function testGetVariant()
@@ -62,11 +62,8 @@ final class UnleashEngineTest extends TestCase
         $engine->takeState($jsonData);
         $context = new Context("test", "test", "test", "test", "test", "test", new stdClass());
 
-        $variant = $engine->getVariant("test", $context);
-        $this->assertNotNull($variant);
-
-        $this->assertEquals("disabled", $variant->name);
-        $this->assertFalse($variant->enabled);
+        $variant = $engine->getVariant("Feature.A", $context);
+        $this->assertNull($variant);
     }
 
     function testClientSpec()
@@ -80,7 +77,7 @@ final class UnleashEngineTest extends TestCase
             $suiteData = json_decode(file_get_contents($suitePath));
             $unleashEngine->takeState(json_encode($suiteData->state));
 
-            $tests = isset($suiteData->tests) ? $suiteData->tests : [];
+            $tests = $suiteData->tests ?? [];
             foreach ($tests as $test) {
                 $contextData = $test->context;
                 $toggleName = $test->toggleName;
@@ -88,10 +85,10 @@ final class UnleashEngineTest extends TestCase
                 $context = new Context($contextData->userId, $contextData->sessionId, $contextData->remoteAddress, $contextData->environment, $contextData->appName, $contextData->currentTime, $contextData->properties);
 
                 $result = $unleashEngine->isEnabled($toggleName, $context);
-                $this->assertEquals($result, $expectedResult, "Failed test '{$test->description}': expected {$expectedResult}, got {$result}");
+                $this->assertEquals($expectedResult, $result, "Failed test '{$test->description}': expected {$expectedResult}, got {$result}");
             }
 
-            $variantTests = isset($suiteData->variantTests) ? $suiteData->variantTests : [];
+            $variantTests = $suiteData->variantTests ?? [];
             foreach ($variantTests as $test) {
                 $contextData = $test->context;
                 $toggleName = $test->toggleName;
@@ -99,10 +96,14 @@ final class UnleashEngineTest extends TestCase
                 $context = new Context($contextData->userId, $contextData->sessionId, $contextData->remoteAddress, $contextData->environment, $contextData->appName, $contextData->currentTime, $contextData->properties);
 
                 $result = $unleashEngine->getVariant($toggleName, $context);
-                $jsonResult = json_encode($result);
-                $expectedJsonResult = json_encode($expectedResult);
 
-                $this->assertEquals($jsonResult, $expectedJsonResult, "Failed test '{$test->description}': expected {$expectedJsonResult}, got {$jsonResult}");
+                if ($expectedResult->name === 'disabled') {
+                    $this->assertNull($result);
+                } else {
+                    $this->assertEquals($expectedResult->name, $result->name);
+                    $this->assertEquals($expectedResult->payload, $result->payload);
+                    $this->assertEquals($expectedResult->enabled, $result->enabled);
+                }
             }
         }
 

@@ -503,6 +503,7 @@ mod tests {
             query: None,
             segments: None,
             version: 2,
+            meta: None,
         };
 
         unsafe {
@@ -624,6 +625,7 @@ mod tests {
             }],
             query: None,
             segments: None,
+            meta: None,
             version: 2,
         };
 
@@ -680,6 +682,7 @@ mod tests {
             ],
             query: None,
             segments: None,
+            meta: None,
             version: 2,
         };
 

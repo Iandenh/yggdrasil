@@ -5,7 +5,115 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.16.1 (2025-01-30)
+
+### Chore
+
+ - <csr-id-60a6f0bfc48c225ad8c2864019db5914bbb901e7/> update releasing template
+ - <csr-id-93953bca1a927c5819caeb2d56499133e81bd07d/> bump types to 0.15.6
+ - <csr-id-a49d70d768bb4df7c1bf3161855455d5fe0429a6/> bump types to 0.15.6
+ - <csr-id-a0632ef5ea76a60b44cc8105a29be4f335a9bdb2/> optimizations to core layer
+   * fix: repair benchmarks
+   
+   * chore: move fallback date into rule engine so that rules that don't need it don't incur the cost of creating a date
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release.
+ - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#209](https://github.com/Unleash/yggdrasil/issues/209), [#210](https://github.com/Unleash/yggdrasil/issues/210)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#209](https://github.com/Unleash/yggdrasil/issues/209)**
+    - Optimizations to core layer ([`a0632ef`](https://github.com/Unleash/yggdrasil/commit/a0632ef5ea76a60b44cc8105a29be4f335a9bdb2))
+ * **[#210](https://github.com/Unleash/yggdrasil/issues/210)**
+    - Bump types to 0.15.6 ([`93953bc`](https://github.com/Unleash/yggdrasil/commit/93953bca1a927c5819caeb2d56499133e81bd07d))
+ * **Uncategorized**
+    - Update releasing template ([`60a6f0b`](https://github.com/Unleash/yggdrasil/commit/60a6f0bfc48c225ad8c2864019db5914bbb901e7))
+    - Bump types to 0.15.6 ([`a49d70d`](https://github.com/Unleash/yggdrasil/commit/a49d70d768bb4df7c1bf3161855455d5fe0429a6))
+</details>
+
+## v0.16.0 (2025-01-29)
+
+### New Features
+
+ - <csr-id-d73a4fa0581b32e14d4efe3d763eb623e1ff3e65/> add hydration method to ruby to receive delta updates
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#206](https://github.com/Unleash/yggdrasil/issues/206)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#206](https://github.com/Unleash/yggdrasil/issues/206)**
+    - Add hydration method to ruby to receive delta updates ([`d73a4fa`](https://github.com/Unleash/yggdrasil/commit/d73a4fa0581b32e14d4efe3d763eb623e1ff3e65))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.16.0 ([`9cb7625`](https://github.com/Unleash/yggdrasil/commit/9cb762563ce439f552a8d9ae804c4b4f1a09c25e))
+</details>
+
+## v0.15.0 (2025-01-29)
+
+<csr-id-c685343d91c9f3ed64422d19915a74c4d52e823b/>
+
+### Chore
+
+ - <csr-id-c685343d91c9f3ed64422d19915a74c4d52e823b/> clean up some clippy warnings, remove an unnessary clone
+
+### New Features
+
+ - <csr-id-12350311c13a5f606bd8cde354b8a17f16586483/> implement new delta api format
+   * feat: implement new delta api format
+* feat: implement new delta api format
+* feat: implement new delta api format
+* feat: implement new delta api format
+* feat: internal ygg feature toggle cache
+* feat: rename to take_delta
+* fix: fmt
+* fix: rm comments
+* fix: remove uneccesary setter
+* fix: fmt
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 14 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#204](https://github.com/Unleash/yggdrasil/issues/204), [#205](https://github.com/Unleash/yggdrasil/issues/205)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#204](https://github.com/Unleash/yggdrasil/issues/204)**
+    - Implement new delta api format ([`1235031`](https://github.com/Unleash/yggdrasil/commit/12350311c13a5f606bd8cde354b8a17f16586483))
+ * **[#205](https://github.com/Unleash/yggdrasil/issues/205)**
+    - Clean up some clippy warnings, remove an unnessary clone ([`c685343`](https://github.com/Unleash/yggdrasil/commit/c685343d91c9f3ed64422d19915a74c4d52e823b))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.15.0 ([`2da9cac`](https://github.com/Unleash/yggdrasil/commit/2da9cac60f7f82eeb43a9cc985aa6254d8822b73))
+</details>
+
 ## v0.14.6 (2025-01-14)
+
+<csr-id-f870bfdf0be8554152ddebe7eb173ed3e7286816/>
 
 ### Chore
 
@@ -15,20 +123,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-9ef5c467ece7948e56a1cf6c1b544614ec8a387e/> expose list_known_features and core version in java layer
    * feat(java): expose list_known_features
-   
-   * refactor(java):separate resposibilities on java engine so static methods can be exposed and do memory management that should work on Java 18 and above (#198)
-   
-   * refactor(java): rework java engine so that static methods can be exposed cleanly
-   
-   * feat(java): expose core version in java engine layer (#199)
-   
-   * fix(java): force native encoding to utf-8 so windows doesn't set it to something horrible (#200)
+* refactor(java):separate resposibilities on java engine so static methods can be exposed and do memory management that should work on Java 18 and above (#198)
+* refactor(java): rework java engine so that static methods can be exposed cleanly
+* feat(java): expose core version in java engine layer (#199)
+* fix(java): force native encoding to utf-8 so windows doesn't set it to something horrible (#200)
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 6 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#197](https://github.com/Unleash/yggdrasil/issues/197), [#201](https://github.com/Unleash/yggdrasil/issues/201)
@@ -43,6 +147,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Expose list_known_features and core version in java layer ([`9ef5c46`](https://github.com/Unleash/yggdrasil/commit/9ef5c467ece7948e56a1cf6c1b544614ec8a387e))
  * **[#201](https://github.com/Unleash/yggdrasil/issues/201)**
     - Bump unleash types to 0.15.4 ([`f870bfd`](https://github.com/Unleash/yggdrasil/commit/f870bfdf0be8554152ddebe7eb173ed3e7286816))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.14.6 ([`fc48343`](https://github.com/Unleash/yggdrasil/commit/fc48343b87ce7471eb124b2277ce7c5f48227771))
 </details>
 
 ## v0.14.5 (2025-01-08)
@@ -286,7 +392,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release over the course of 13 calendar days.
+ - 3 commits contributed to the release.
  - 14 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#141](https://github.com/Unleash/yggdrasil/issues/141), [#144](https://github.com/Unleash/yggdrasil/issues/144)
@@ -449,7 +555,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-read-only-do-not-edit/>
 
  - 6 commits contributed to the release.
- - 36 days passed between releases.
  - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#120](https://github.com/Unleash/yggdrasil/issues/120), [#121](https://github.com/Unleash/yggdrasil/issues/121), [#122](https://github.com/Unleash/yggdrasil/issues/122)
 
@@ -500,7 +605,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-read-only-do-not-edit/>
 
  - 10 commits contributed to the release over the course of 62 calendar days.
- - 71 days passed between releases.
  - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 9 unique issues were worked on: [#101](https://github.com/Unleash/yggdrasil/issues/101), [#102](https://github.com/Unleash/yggdrasil/issues/102), [#103](https://github.com/Unleash/yggdrasil/issues/103), [#109](https://github.com/Unleash/yggdrasil/issues/109), [#110](https://github.com/Unleash/yggdrasil/issues/110), [#114](https://github.com/Unleash/yggdrasil/issues/114), [#118](https://github.com/Unleash/yggdrasil/issues/118), [#97](https://github.com/Unleash/yggdrasil/issues/97), [#98](https://github.com/Unleash/yggdrasil/issues/98)
 

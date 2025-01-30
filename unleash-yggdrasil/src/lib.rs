@@ -167,7 +167,7 @@ pub fn compile(
     warnings: &mut Vec<EvalWarning>,
 ) -> CompiledToggle {
     let rule = upgrade(&toggle.strategies.clone().unwrap_or_default(), segment_map);
-    let variant_rule = compile_variant_rule(&toggle, segment_map);
+    let variant_rule = compile_variant_rule(toggle, segment_map);
     CompiledToggle {
         name: toggle.name.clone(),
         enabled: toggle.enabled,
@@ -223,6 +223,7 @@ struct Metric {
 
 pub struct EngineState {
     compiled_state: Option<CompiledState>,
+    previous_state: ClientFeatures,
     toggle_metrics: DashMap<String, Metric>,
     pub started: DateTime<Utc>,
 }
@@ -232,6 +233,7 @@ impl Default for EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
+            previous_state: Default::default(),
             started: Utc::now(),
         }
     }
@@ -247,24 +249,12 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
-    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
-        let mut current_state = self.compiled_state.take().unwrap_or_default();
-        let segment_map = build_segment_map(&delta.segments);
-        let mut warnings: Vec<EvalWarning> = vec![];
-        for removed in delta.removed.clone() {
-            current_state.remove(&removed);
-        }
-        for update in delta.updated.clone() {
-            let updated_state = compile(&update, &segment_map, &mut warnings);
-            current_state.insert(update.name.clone(), updated_state);
-        }
-        self.compiled_state = Some(current_state);
-        if warnings.is_empty() {
-            None
-        } else {
-            Some(warnings)
-        }
+    pub fn apply_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
+        let mut new_state = self.previous_state.clone();
+        new_state.apply_delta(delta);
+        self.take_state(new_state)
     }
+
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
         self.compiled_state
             .as_ref()
@@ -625,6 +615,7 @@ impl EngineState {
 
     pub fn take_state(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
+        self.previous_state = toggles;
         self.compiled_state = Some(compiled_state);
         if !warnings.is_empty() {
             Some(warnings)
@@ -798,7 +789,7 @@ mod test {
     fn can_load_single() {
         let delta = load_delta("delta_base.json");
         let mut engine = EngineState::default();
-        engine.take_delta(&delta);
+        engine.apply_delta(&delta);
         assert!(engine.get_toggle("test-flag").is_some())
     }
 
@@ -812,11 +803,11 @@ mod test {
             ..Context::default()
         };
 
-        engine.take_delta(&delta);
+        engine.apply_delta(&delta);
         assert!(!engine.is_enabled("test-flag", &context, &None));
         assert!(engine.get_toggle("removed-flag").is_some());
         assert!(!engine.is_enabled("segment-flag", &context, &None));
-        engine.take_delta(&patch);
+        engine.apply_delta(&patch);
         assert!(engine.is_enabled("test-flag", &context, &None));
         assert!(!engine.get_toggle("removed-flag").is_some());
         assert!(engine.is_enabled("segment-flag", &context, &None));

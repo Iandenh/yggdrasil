@@ -202,6 +202,23 @@ pub unsafe extern "C" fn check_enabled(
     result_to_json_ptr(result)
 }
 
+/// Resolves all toggles for a given context.
+///
+/// This function evaluates all toggles available in the engine for the provided context and returns a JSON
+/// encoded mapping (typically a JSON object) where each key is a toggle name and each value is the corresponding
+/// `ResolvedToggle` containing its computed state and variant details. This allows for a bulk retrieval of toggle
+/// states based on the current context.
+///
+/// # Safety
+///
+/// The caller is responsible for ensuring all arguments are valid pointers.
+/// Null pointers will result in an error message being returned to the caller,
+/// but any invalid pointers will result in undefined behavior.
+/// These pointers should not be dropped for the lifetime of this function call.
+///
+/// The caller is responsible for freeing the allocated memory.
+/// This can be done by calling `free_response` and passing in the pointer returned by this method.
+/// Failure to do so will result in a leak.
 #[no_mangle]
 pub unsafe extern "C" fn resolve_all(
     engine_ptr: *mut c_void,
@@ -217,6 +234,23 @@ pub unsafe extern "C" fn resolve_all(
     result_to_json_ptr(result)
 }
 
+/// Resolves a single toggle for a given context.
+///
+/// This function computes the resolved state of the specified toggle—including its enabled status and any
+/// associated variant details—based on the provided context and the current state stored in the engine.
+/// The result is returned as a JSON encoded response of type `ResolvedToggle`. If the toggle does not exist,
+/// the response will indicate a null or empty value.
+///
+/// # Safety
+///
+/// The caller is responsible for ensuring all arguments are valid pointers.
+/// Null pointers will result in an error message being returned to the caller,
+/// but any invalid pointers will result in undefined behavior.
+/// These pointers should not be dropped for the lifetime of this function call.
+///
+/// The caller is responsible for freeing the allocated memory.
+/// This can be done by calling `free_response` and passing in the pointer returned by this method.
+/// Failure to do so will result in a leak.
 #[no_mangle]
 pub unsafe extern "C" fn resolve(
     engine_ptr: *mut c_void,

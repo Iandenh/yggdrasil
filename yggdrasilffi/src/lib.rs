@@ -23,8 +23,6 @@ struct Response<T> {
     error_message: Option<String>,
 }
 
-type CustomStrategyResults = HashMap<String, bool>;
-
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 enum ResponseCode {
     Error = -2,

@@ -2,7 +2,9 @@ use std::{
     collections::HashMap,
     ffi::{c_char, CStr, CString},
     fmt::{self, Display, Formatter},
+    mem::forget,
     str::Utf8Error,
+    sync::{Arc, Mutex, MutexGuard},
 };
 
 use libc::c_void;
@@ -22,6 +24,9 @@ struct Response<T> {
     value: Option<T>,
     error_message: Option<String>,
 }
+
+type RawPointerDataType = Mutex<EngineState>;
+type ManagedEngine = Arc<RawPointerDataType>;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 enum ResponseCode {
@@ -52,6 +57,7 @@ impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
     }
 }
 
+#[derive(Debug)]
 enum FFIError {
     Utf8Error,
     NullError,
@@ -86,14 +92,6 @@ impl From<serde_json::Error> for FFIError {
     }
 }
 
-unsafe fn get_engine<'a>(engine_ptr: *mut c_void) -> Result<&'a mut EngineState, FFIError> {
-    if engine_ptr.is_null() {
-        Err(FFIError::NullError)
-    } else {
-        Ok(unsafe { &mut *(engine_ptr as *mut EngineState) })
-    }
-}
-
 unsafe fn get_str<'a>(ptr: *const c_char) -> Result<&'a str, FFIError> {
     if ptr.is_null() {
         Err(FFIError::NullError)
@@ -113,6 +111,25 @@ fn result_to_json_ptr<T: Serialize>(result: Result<Option<T>, FFIError>) -> *mut
     CString::new(json_string).unwrap().into_raw()
 }
 
+unsafe fn get_engine(engine_ptr: *mut c_void) -> Result<ManagedEngine, FFIError> {
+    if engine_ptr.is_null() {
+        return Err(FFIError::NullError);
+    }
+    let arc_instance = Arc::from_raw(engine_ptr as *const RawPointerDataType);
+
+    let cloned_arc = arc_instance.clone();
+    forget(arc_instance);
+
+    Ok(cloned_arc)
+}
+
+fn recover_lock<T>(lock: &Mutex<T>) -> MutexGuard<T> {
+    match lock.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
+
 /// Instantiates a new engine. Returns a pointer to the engine.
 ///
 /// # Safety
@@ -121,8 +138,9 @@ fn result_to_json_ptr<T: Serialize>(result: Result<Option<T>, FFIError>) -> *mut
 /// `free_engine` and passing in the pointer returned by this method. Failure to do so will result in a leak.
 #[no_mangle]
 pub extern "C" fn new_engine() -> *mut c_void {
-    let engine = EngineState::default();
-    Box::into_raw(Box::new(engine)) as *mut c_void
+    let engine = Mutex::new(EngineState::default());
+    let arc = Arc::new(engine);
+    Arc::into_raw(arc) as *mut c_void
 }
 
 /// Frees the memory allocated for the engine.
@@ -140,7 +158,7 @@ pub unsafe extern "C" fn free_engine(engine_ptr: *mut c_void) {
     if engine_ptr.is_null() {
         return;
     }
-    drop(Box::from_raw(engine_ptr as *mut EngineState));
+    drop(Arc::from_raw(engine_ptr as *const RawPointerDataType));
 }
 
 /// Takes a JSON string representing a set of toggles. Returns a JSON encoded response object
@@ -159,7 +177,9 @@ pub unsafe extern "C" fn take_state(
     json_ptr: *const c_char,
 ) -> *const c_char {
     let result: Result<Option<()>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
+        let guard = get_engine(engine_ptr)?;
+        let mut engine = recover_lock(&guard);
+
         let toggles: UpdateMessage = get_json(json_ptr)?;
 
         if let Some(warnings) = engine.take_state(toggles) {
@@ -190,7 +210,9 @@ pub unsafe extern "C" fn check_enabled(
     context_ptr: *const c_char,
 ) -> *const c_char {
     let result: Result<Option<bool>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
+
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
 
@@ -284,7 +306,9 @@ pub unsafe extern "C" fn check_variant(
     context_ptr: *const c_char,
 ) -> *const c_char {
     let result: Result<Option<ExtendedVariantDef>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
+
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
         let base_variant = engine.check_variant(
@@ -366,7 +390,9 @@ pub unsafe extern "C" fn count_toggle(
     let enabled = enabled & 1 == 1;
 
     let result: Result<Option<()>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
+
         let toggle_name = get_str(toggle_name_ptr)?;
 
         engine.count_toggle(toggle_name, enabled);
@@ -395,7 +421,9 @@ pub unsafe extern "C" fn count_variant(
     variant_name_ptr: *const c_char,
 ) -> *const c_char {
     let result: Result<Option<()>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
+
         let toggle_name = get_str(toggle_name_ptr)?;
         let variant_name = get_str(variant_name_ptr)?;
 
@@ -421,7 +449,8 @@ pub unsafe extern "C" fn count_variant(
 #[no_mangle]
 pub unsafe extern "C" fn get_metrics(engine_ptr: *mut c_void) -> *mut c_char {
     let result: Result<Option<MetricBucket>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
+        let guard = get_engine(engine_ptr)?;
+        let mut engine = recover_lock(&guard);
 
         Ok(engine.get_metrics())
     })();
@@ -442,7 +471,9 @@ pub unsafe extern "C" fn should_emit_impression_event(
     toggle_name_ptr: *const c_char,
 ) -> *mut c_char {
     let result: Result<Option<bool>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
+
         let toggle_name = get_str(toggle_name_ptr)?;
 
         Ok(Some(engine.should_emit_impression_event(toggle_name)))
@@ -465,7 +496,8 @@ pub unsafe extern "C" fn should_emit_impression_event(
 #[no_mangle]
 pub unsafe extern "C" fn list_known_toggles(engine_ptr: *mut c_void) -> *mut c_char {
     let result: Result<Option<Vec<ToggleDefinition>>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
 
         Ok(Some(engine.list_known_toggles()))
     })();
@@ -475,14 +507,10 @@ pub unsafe extern "C" fn list_known_toggles(engine_ptr: *mut c_void) -> *mut c_c
 
 #[cfg(test)]
 mod tests {
-    use std::ffi::{CStr, CString};
-
+    use super::*;
     use unleash_types::client_features::{
         ClientFeature, ClientFeatures, Strategy, Variant, WeightType,
     };
-    use unleash_yggdrasil::{EngineState, ExtendedVariantDef, UpdateMessage};
-
-    use crate::{check_enabled, check_variant, new_engine, Response, ResponseCode};
 
     #[test]
     fn when_requesting_a_toggle_that_does_not_exist_then_a_response_with_no_error_and_not_found_is_returned(
@@ -543,8 +571,10 @@ mod tests {
         };
 
         unsafe {
-            let engine = &mut *(engine_ptr as *mut EngineState);
+            let engine_guard = get_engine(engine_ptr).expect("Expected a valid engine pointer");
+            let mut engine = engine_guard.lock().expect("Failed to lock engine mutex");
             let warnings = engine.take_state(UpdateMessage::FullResponse(client_features));
+            drop(engine);
 
             let string_response =
                 check_enabled(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
@@ -666,8 +696,10 @@ mod tests {
         };
 
         unsafe {
-            let engine = &mut *(engine_ptr as *mut EngineState);
+            let engine_guard = get_engine(engine_ptr).expect("Expected a valid engine pointer");
+            let mut engine = engine_guard.lock().expect("Failed to lock engine mutex");
             let warnings = engine.take_state(UpdateMessage::FullResponse(client_features));
+            drop(engine);
 
             let string_response =
                 check_variant(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
@@ -723,8 +755,10 @@ mod tests {
         };
 
         unsafe {
-            let engine = &mut *(engine_ptr as *mut EngineState);
+            let engine_guard = get_engine(engine_ptr).expect("Expected a valid engine pointer");
+            let mut engine = engine_guard.lock().expect("Failed to lock engine mutex");
             engine.take_state(UpdateMessage::FullResponse(client_features));
+            drop(engine);
 
             let string_response = super::list_known_toggles(engine_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();

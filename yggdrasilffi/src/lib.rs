@@ -245,7 +245,9 @@ pub unsafe extern "C" fn resolve_all(
     context_ptr: *const c_char,
 ) -> *const c_char {
     let result: Result<Option<HashMap<String, ResolvedToggle>>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
+
         let context: Context = get_json(context_ptr)?;
 
         Ok(engine.resolve_all(&context, &None))
@@ -278,7 +280,9 @@ pub unsafe extern "C" fn resolve(
     context_ptr: *const c_char,
 ) -> *const c_char {
     let result: Result<Option<ResolvedToggle>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
+
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
 
@@ -519,15 +523,13 @@ mod tests {
 
         let c_toggle_name = CString::new("some-toggle").unwrap();
         let c_context = CString::new("{}").unwrap();
-        let c_results = CString::new("{}").unwrap();
 
         let toggle_name_ptr = c_toggle_name.as_ptr();
         let context_ptr = c_context.as_ptr();
-        let results_ptr = c_results.as_ptr();
 
         unsafe {
             let string_response =
-                check_enabled(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
+                check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
@@ -544,11 +546,9 @@ mod tests {
 
         let c_toggle_name = CString::new(toggle_under_test).unwrap();
         let c_context = CString::new("{}").unwrap();
-        let c_results = CString::new("{}").unwrap();
 
         let toggle_name_ptr = c_toggle_name.as_ptr();
         let context_ptr = c_context.as_ptr();
-        let results_ptr = c_results.as_ptr();
 
         let client_features = ClientFeatures {
             features: vec![ClientFeature {
@@ -577,7 +577,7 @@ mod tests {
             drop(engine);
 
             let string_response =
-                check_enabled(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
+                check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
@@ -594,14 +594,12 @@ mod tests {
         unsafe {
             let c_toggle_name = CString::new("some-toggle").unwrap();
             let c_context = CString::new("{}").unwrap();
-            let c_results = CString::new("{}").unwrap();
 
             let toggle_name_ptr = c_toggle_name.as_ptr();
             let context_ptr = c_context.as_ptr();
-            let results_ptr = c_results.as_ptr();
 
             let string_response =
-                check_enabled(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
+                check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
@@ -616,14 +614,12 @@ mod tests {
 
         unsafe {
             let c_context = CString::new("{}").unwrap();
-            let c_results = CString::new("{}").unwrap();
 
             let toggle_name_ptr = std::ptr::null();
             let context_ptr = c_context.as_ptr();
-            let results_ptr = c_results.as_ptr();
 
             let string_response =
-                check_enabled(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
+                check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
@@ -638,14 +634,12 @@ mod tests {
 
         unsafe {
             let c_toggle_name = CString::new("some-toggle").unwrap();
-            let c_results = CString::new("{}").unwrap();
 
             let toggle_name_ptr = c_toggle_name.as_ptr();
             let context_ptr = std::ptr::null();
-            let results_ptr = c_results.as_ptr();
 
             let string_response =
-                check_enabled(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
+                check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
@@ -661,11 +655,9 @@ mod tests {
 
         let c_toggle_name = CString::new(toggle_under_test).unwrap();
         let c_context = CString::new("{}").unwrap();
-        let c_results = CString::new("{}").unwrap();
 
         let toggle_name_ptr = c_toggle_name.as_ptr();
         let context_ptr = c_context.as_ptr();
-        let results_ptr = c_results.as_ptr();
 
         let client_features = ClientFeatures {
             features: vec![ClientFeature {
@@ -702,7 +694,7 @@ mod tests {
             drop(engine);
 
             let string_response =
-                check_variant(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
+                check_variant(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let variant_response: Response<ExtendedVariantDef> =
                 serde_json::from_str(response).unwrap();

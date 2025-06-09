@@ -1,8 +1,9 @@
 [workspace]
 resolver = "2"
 
-members = [
+members = [ 
+  "pure-wasm",
   "unleash-yggdrasil",
-  "yggdrasilwasm",
   "yggdrasilffi",
 ]
+

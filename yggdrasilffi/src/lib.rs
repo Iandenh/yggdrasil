@@ -7,12 +7,13 @@ use std::{
     sync::{Arc, Mutex, MutexGuard},
 };
 
+use chrono::Utc;
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{
-    Context, EngineState, EvalWarning, ExtendedVariantDef, ToggleDefinition, UpdateMessage,
-    CORE_VERSION, ResolvedToggle, KNOWN_STRATEGIES,
+    state::EnrichedContext, Context, EngineState, EvalWarning, ExtendedVariantDef,
+    ToggleDefinition, UpdateMessage, CORE_VERSION, ResolvedToggle, KNOWN_STRATEGIES,
 };
 
 static CORE_VERSION_CSTRING: std::sync::LazyLock<CString> =
@@ -216,7 +217,10 @@ pub unsafe extern "C" fn check_enabled(
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
 
-        Ok(engine.check_enabled(toggle_name, &context, &None))
+        let enriched_context =
+            EnrichedContext::from(context, toggle_name.into(), &None);
+
+        Ok(engine.check_enabled(&enriched_context))
     })();
 
     result_to_json_ptr(result)
@@ -285,6 +289,8 @@ pub unsafe extern "C" fn resolve(
 
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
+        let enriched_context =
+            EnrichedContext::from(context, toggle_name.into(), Some(custom_strategy_results));
 
         Ok(engine.resolve(toggle_name, &context, &None))
     })();
@@ -315,14 +321,11 @@ pub unsafe extern "C" fn check_variant(
 
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
-        let base_variant = engine.check_variant(
-            toggle_name,
-            &context,
-            &None,
-        );
-        let toggle_enabled = engine
-            .check_enabled(toggle_name, &context, &None)
-            .unwrap_or_default();
+        let enriched_context =
+            EnrichedContext::from(context, toggle_name.into(), &None);
+
+        let base_variant = engine.check_variant(&enriched_context);
+        let toggle_enabled = engine.check_enabled(&enriched_context).unwrap_or_default();
         Ok(base_variant.map(|variant| variant.to_enriched_response(toggle_enabled)))
     })();
 
@@ -456,7 +459,7 @@ pub unsafe extern "C" fn get_metrics(engine_ptr: *mut c_void) -> *mut c_char {
         let guard = get_engine(engine_ptr)?;
         let mut engine = recover_lock(&guard);
 
-        Ok(engine.get_metrics())
+        Ok(engine.get_metrics(Utc::now()))
     })();
 
     result_to_json_ptr(result)

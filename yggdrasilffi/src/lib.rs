@@ -218,7 +218,7 @@ pub unsafe extern "C" fn check_enabled(
         let context: Context = get_json(context_ptr)?;
 
         let enriched_context =
-            EnrichedContext::from(context, toggle_name.into(), &None);
+            EnrichedContext::from(context, toggle_name.into(), None);
 
         Ok(engine.check_enabled(&enriched_context))
     })();
@@ -289,8 +289,6 @@ pub unsafe extern "C" fn resolve(
 
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
-        let enriched_context =
-            EnrichedContext::from(context, toggle_name.into(), Some(custom_strategy_results));
 
         Ok(engine.resolve(toggle_name, &context, &None))
     })();
@@ -322,7 +320,7 @@ pub unsafe extern "C" fn check_variant(
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
         let enriched_context =
-            EnrichedContext::from(context, toggle_name.into(), &None);
+            EnrichedContext::from(context, toggle_name.into(), None);
 
         let base_variant = engine.check_variant(&enriched_context);
         let toggle_enabled = engine.check_enabled(&enriched_context).unwrap_or_default();

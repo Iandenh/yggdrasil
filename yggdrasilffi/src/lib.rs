@@ -12,8 +12,8 @@ use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{
-    state::EnrichedContext, Context, EngineState, EvalWarning, ExtendedVariantDef,
-    ToggleDefinition, UpdateMessage, CORE_VERSION, ResolvedToggle, KNOWN_STRATEGIES,
+    state::EnrichedContext, Context, EngineState, EvalWarning, ExtendedVariantDef, ResolvedToggle,
+    ToggleDefinition, UpdateMessage, CORE_VERSION, KNOWN_STRATEGIES,
 };
 
 static CORE_VERSION_CSTRING: std::sync::LazyLock<CString> =
@@ -217,8 +217,7 @@ pub unsafe extern "C" fn check_enabled(
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
 
-        let enriched_context =
-            EnrichedContext::from(context, toggle_name.into(), None);
+        let enriched_context = EnrichedContext::from(context, toggle_name.into(), None);
 
         Ok(engine.check_enabled(&enriched_context))
     })();
@@ -319,8 +318,7 @@ pub unsafe extern "C" fn check_variant(
 
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
-        let enriched_context =
-            EnrichedContext::from(context, toggle_name.into(), None);
+        let enriched_context = EnrichedContext::from(context, toggle_name.into(), None);
 
         let base_variant = engine.check_variant(&enriched_context);
         let toggle_enabled = engine.check_enabled(&enriched_context).unwrap_or_default();
@@ -529,8 +527,7 @@ mod tests {
         let context_ptr = c_context.as_ptr();
 
         unsafe {
-            let string_response =
-                check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
+            let string_response = check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
@@ -577,8 +574,7 @@ mod tests {
             let warnings = engine.take_state(UpdateMessage::FullResponse(client_features));
             drop(engine);
 
-            let string_response =
-                check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
+            let string_response = check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
@@ -599,8 +595,7 @@ mod tests {
             let toggle_name_ptr = c_toggle_name.as_ptr();
             let context_ptr = c_context.as_ptr();
 
-            let string_response =
-                check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
+            let string_response = check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
@@ -619,8 +614,7 @@ mod tests {
             let toggle_name_ptr = std::ptr::null();
             let context_ptr = c_context.as_ptr();
 
-            let string_response =
-                check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
+            let string_response = check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
@@ -639,8 +633,7 @@ mod tests {
             let toggle_name_ptr = c_toggle_name.as_ptr();
             let context_ptr = std::ptr::null();
 
-            let string_response =
-                check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
+            let string_response = check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
@@ -694,8 +687,7 @@ mod tests {
             let warnings = engine.take_state(UpdateMessage::FullResponse(client_features));
             drop(engine);
 
-            let string_response =
-                check_variant(engine_ptr, toggle_name_ptr, context_ptr);
+            let string_response = check_variant(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let variant_response: Response<ExtendedVariantDef> =
                 serde_json::from_str(response).unwrap();

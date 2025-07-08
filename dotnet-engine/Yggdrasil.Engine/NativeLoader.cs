@@ -52,9 +52,16 @@ internal static class NativeLibLoader
         if (os == "linux" && IsMusl())
             libc = "-musl";
 
+        var versionAttribute = Assembly
+            .GetExecutingAssembly()
+            .GetCustomAttribute<YggdrasilCoreVersionAttribute>();
+        if (versionAttribute == null)
+            throw new InvalidOperationException("YggdrasilCoreVersionAttribute was not defined on the assembly.");
+        var versionString = versionAttribute.Version;
+
         string filename = os == "win"
-            ? $"yggdrasilffi_{arch}.dll"
-            : $"libyggdrasilffi_{arch}{libc}.{(os == "osx" ? "dylib" : "so")}";
+            ? $"yggdrasilffi_{arch}_{versionString}.dll"
+            : $"libyggdrasilffi_{arch}{libc}_{versionString}.{(os == "osx" ? "dylib" : "so")}";
 
         return filename;
     }
@@ -98,13 +105,15 @@ internal static class NativeLibLoader
 
     internal static IntPtr LoadFunctionPointer(IntPtr libHandle, string functionName)
     {
-        Type nativeLibraryType = Type.GetType("System.Runtime.InteropServices.NativeLibrary, System.Runtime.InteropServices");
+        var nativeLibraryType = Type.GetType("System.Runtime.InteropServices.NativeLibrary, System.Runtime.InteropServices");
         if (nativeLibraryType != null)
         {
             var getExportMethod = nativeLibraryType.GetMethod("GetExport", new[] { typeof(IntPtr), typeof(string) });
             if (getExportMethod != null)
             {
-                return (IntPtr)getExportMethod.Invoke(null, new object[] { libHandle, functionName });
+                var invocationPtr = (IntPtr?)getExportMethod.Invoke(null, new object[] { libHandle, functionName });
+                if (invocationPtr.HasValue && invocationPtr.Value != IntPtr.Zero)
+                    return invocationPtr.Value;
             }
         }
 
@@ -116,27 +125,31 @@ internal static class NativeLibLoader
 
     private static IntPtr LoadBinary(string libPath)
     {
-        IntPtr handle;
+        IntPtr? handle;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             handle = LoadWindowsLibrary(libPath);
         else
             handle = LoadUnixLibrary(libPath);
 
-        if (handle == IntPtr.Zero)
+        if (handle is null || handle == IntPtr.Zero)
             throw new DllNotFoundException($"Failed to load library from {libPath}");
 
-        return handle;
+        return (IntPtr)handle;
     }
 
     private static IntPtr LoadUnixLibrary(string libPath)
     {
         // Try NativeLibrary.Load (works on .NET Core 3+)
-        Type nativeLibraryType = Type.GetType("System.Runtime.InteropServices.NativeLibrary, System.Runtime.InteropServices");
+        var nativeLibraryType = Type.GetType("System.Runtime.InteropServices.NativeLibrary, System.Runtime.InteropServices");
         if (nativeLibraryType != null)
         {
             var loadMethod = nativeLibraryType.GetMethod("Load", new[] { typeof(string) });
             if (loadMethod != null)
-                return (IntPtr)loadMethod.Invoke(null, new object[] { libPath });
+            {
+                var invocationPtr = (IntPtr?)loadMethod.Invoke(null, new object[] { libPath });
+                if (invocationPtr.HasValue && invocationPtr.Value != IntPtr.Zero)
+                    return invocationPtr.Value;
+            }
         }
         return dlopen(libPath, RTLD_NOW);
     }
@@ -144,18 +157,21 @@ internal static class NativeLibLoader
     private static IntPtr LoadWindowsLibrary(string libPath)
     {
         // Try NativeLibrary.Load (works on .NET Core 3+)
-        Type nativeLibraryType = Type.GetType("System.Runtime.InteropServices.NativeLibrary, System.Runtime.InteropServices");
+        var nativeLibraryType = Type.GetType("System.Runtime.InteropServices.NativeLibrary, System.Runtime.InteropServices");
         if (nativeLibraryType != null)
         {
             var loadMethod = nativeLibraryType.GetMethod("Load", new[] { typeof(string) });
             if (loadMethod != null)
-                return (IntPtr)loadMethod.Invoke(null, new object[] { libPath });
+            {
+                var invocationPtr = (IntPtr?)loadMethod.Invoke(null, new object[] { libPath });
+                if (invocationPtr.HasValue && invocationPtr.Value != IntPtr.Zero)
+                    return invocationPtr.Value;
+            }
         }
 
         return LoadLibrary(libPath);
     }
 
-#if NETSTANDARD
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr LoadLibrary(string dllToLoad);
 
@@ -175,5 +191,4 @@ internal static class NativeLibLoader
 
     [DllImport("libdl.so.2", SetLastError = true, CharSet = CharSet.Ansi)]
     private static extern IntPtr dlsym(IntPtr handle, string symbol);
-#endif
 }
